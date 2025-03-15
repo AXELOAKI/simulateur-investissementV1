@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulateur d'Investissement</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Page d'accueil -->
+    <div id="start-container" class="start-container">
+      <h1 class="title">Simulateur d'Investissement Personnalisé</h1>
+      <p class="subtitle">Découvrez votre profil d'investisseur et obtenez une allocation d'actifs adaptée à vos besoins.</p>
+      <button id="start-button" class="start-button">Démarrer le questionnaire</button>
+    </div>
+    
+    <!-- Questionnaire -->
+    <div id="questionnaire-container" class="questionnaire-container">
+      <div class="section-header">
+        <span id="section-name" class="section-name">Profil d'investisseur</span>
+      </div>
+      
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+        <div id="progress-text" class="progress-text">Question 1/21</div>
+      </div>
+      
+      <h2 id="question-title" class="question-title"></h2>
+      <p id="question-description" class="question-description"></p>
+      
+      <div id="options-container" class="options-container"></div>
+      
+      <div class="navigation-buttons">
+        <button id="btn-previous" class="btn btn-previous">Précédent</button>
+        <button id="btn-next" class="btn btn-next">Suivant</button>
+      </div>
+    </div>
+    
+    <!-- Loading -->
+    <div id="loading-container" class="loading-container">
+      <div class="spinner"></div>
+      <p>Calcul de votre allocation d'actifs en cours...</p>
+    </div>
+    
+    <!-- Résultats -->
+    <div id="results-container" class="results-container"></div>
+    
+    <!-- Message d'erreur -->
+    <div id="error-container" class="error-container"></div>
+  </div>
+  
+  <script type="module">
+    import { initQuestionnaire } from './assets/js/ui.js';
+    
+    // Initialiser le questionnaire
+    document.addEventListener('DOMContentLoaded', function() {
+      initQuestionnaire();
+    });
+  </script>
+</body>
+</html>
