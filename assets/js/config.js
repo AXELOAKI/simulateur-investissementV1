@@ -1,14 +1,14 @@
 // config.js - Configuration de l'API et paramètres globaux
 
 // URL de base de l'API
-const API_BASE_URL = "https://simulateur-investissement-api-1118b9c7c6a1.herokuapp.com/api/v1";
+const API_BASE_URL = "https://simulateur-investissement-api-1118b9c7c6a1.herokuapp.com";
 
 // Endpoints de l'API
 const API_ENDPOINTS = {
-  CREATE_SESSION: "/sessions",
-  PART1: "/profil",
-  PART2: "/preferences",
-  PART3: "/objectifs",
+  CREATE_SESSION: "/start_session",
+  PART1: "/part1_definition_profil",
+  PART2: "/part2_preferences_style",
+  PART3: "/part3_objectif_horizon",
   REPORT: "/rapport",
   ALLOCATION: "/allocation"
 };
