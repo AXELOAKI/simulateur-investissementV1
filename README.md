@@ -19,7 +19,7 @@ Ce projet est un simulateur d'investissement interactif qui permet aux utilisate
 
 ## Comment l'utiliser
 
-1. Accédez au simulateur via l'URL : [Simulateur d'Investissement](https://votre-nom-utilisateur.github.io/simulateur-investissement/)
+1. Accédez au simulateur via l'URL : [Simulateur d'Investissement](https://axeloaki.github.io/simulateur-investissementV1/)
 2. Cliquez sur "Démarrer le questionnaire"
 3. Répondez aux questions des différentes sections
 4. Obtenez votre allocation d'actifs personnalisée et votre profil d'investisseur
@@ -30,7 +30,7 @@ Ce simulateur peut être facilement intégré dans un site web existant via un i
 
 ```html
 <iframe 
-  src="https://votre-nom-utilisateur.github.io/simulateur-investissement/" 
+  src="https://axeloaki.github.io/simulateur-investissementV1/" 
   width="100%" 
   height="700px" 
   frameborder="0">
