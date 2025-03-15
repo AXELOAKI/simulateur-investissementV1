@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulateur d'Investissement - Démo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <style>
+    /* Styles supplémentaires pour la démo */
+    .demo-badge {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background-color: #ff9966;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-badge">VERSION DÉMO</div>
+  
+  <div class="container">
+    <!-- Page d'accueil -->
+    <div id="start-container" class="start-container">
+      <h1 class="title">Simulateur d'Investissement Personnalisé</h1>
+      <p class="subtitle">Découvrez votre profil d'investisseur et obtenez une allocation d'actifs adaptée à vos besoins.</p>
+      <button id="start-button" class="start-button">Démarrer le questionnaire</button>
+    </div>
+    
+    <!-- Questionnaire -->
+    <div id="questionnaire-container" class="questionnaire-container">
+      <div class="section-header">
+        <span id="section-name" class="section-name">Profil d'investisseur</span>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+        <div id="progress-text" class="progress-text">Question 1/21</div>
+      </div>
+      <h2 id="question-title" class="question-title"></h2>
+      <p id="question-description" class="question-description"></p>
+      <div id="options-container" class="options-container"></div>
+      <div class="navigation-buttons">
+        <button id="btn-previous" class="btn btn-previous">Précédent</button>
+        <button id="btn-next" class="btn btn-next">Suivant</button>
+      </div>
+    </div>
+    
+    <!-- Loading -->
+    <div id="loading-container" class="loading-container">
+      <div class="spinner"></div>
+      <p>Calcul de votre allocation d'actifs en cours...</p>
+    </div>
+    
+    <!-- Résultats -->
+    <div id="results-container" class="results-container"></div>
+    
+    <!-- Message d'erreur -->
+    <div id="error-container" class="error-container"></div>
+  </div>
+  
+  <script type="module">
+    // Importer les questions
+    import questions from './assets/js/questions.js';
+    
+    // État global du questionnaire
+    const state = {
+      currentQuestionIndex: 0,
+      sessionId: "demo-session",
+      responses: {},
+      currentSection: 1
+    };
+    
+    // Configuration des sections du questionnaire
+    const QUESTIONNAIRE_SECTIONS = {
+      1: "Profil d'investisseur",
+      2: "Préférences et Style",
+      3: "Objectifs et Horizon"
+    };
+    
+    // Configuration des axes RAID
+    const RAID_AXES = {
+      "R": "Risque",
+      "A": "Approche",
+      "I": "Implication",
+      "D": "Diversification"
+    };
+    
+    // Initialise le questionnaire
+    function initQuestionnaire() {
+      // Masquer les conteneurs sauf celui de démarrage
+      document.getElementById('questionnaire-container').style.display = 'none';
+      document.getElementById('loading-container').style.display = 'none';
+      document.getElementById('results-container').style.display = 'none';
+      document.getElementById('error-container').style.display = 'none';
+      
+      // Afficher le conteneur de démarrage
+      document.getElementById('start-container').style.display = 'flex';
+      
+      // Attacher l'événement au bouton de démarrage
+      document.getElementById('start-button').addEventListener('click', startQuestionnaire);
+      
+      // Attacher les événements aux boutons de navigation
+      document.getElementById('btn-previous').addEventListener('click', goToPreviousQuestion);
+      document.getElementById('btn-next').addEventListener('click', goToNextQuestion);
+    }
+    
+    // Commence le questionnaire
+    function startQuestionnaire() {
+      document.getElementById('start-container').style.display = 'none';
+      document.getElementById('questionnaire-container').style.display = 'flex';
+      
+      // Afficher la première question
+      displayQuestion(0);
+    }
+    
+    // Affiche la question courante
+    function displayQuestion(index) {
+      if (index < 0 || index >= questions.length) return;
+      
+      state.currentQuestionIndex = index;
+      const question = questions[index];
+      
+      // Si la question a une condition, vérifier si elle doit être affichée
+      if (question.condition) {
+        const conditionMet = checkCondition(question.condition);
+        if (!conditionMet) {
+          // Passer à la question suivante ou précédente
+          if (index > state.currentQuestionIndex) {
+            return displayQuestion(index + 1);
+          } else {
+            return displayQuestion(index - 1);
+          }
+        }
+      }
+      
+      // Mettre à jour la section si nécessaire
+      if (question.section !== state.currentSection) {
+        state.currentSection = question.section;
+        document.getElementById('section-name').textContent = QUESTIONNAIRE_SECTIONS[state.currentSection];
+      }
+      
+      // Mettre à jour le titre et la description de la question
+      document.getElementById('question-title').textContent = question.question;
+      
+      const descriptionElement = document.getElementById('question-description');
+      if (question.description) {
+        descriptionElement.textContent = question.description;
+        descriptionElement.style.display = 'block';
+      } else {
+        descriptionElement.style.display = 'none';
+      }
+      
+      // Mettre à jour les options
+      const optionsContainer = document.getElementById('options-container');
+      optionsContainer.innerHTML = '';
+      
+      question.options.forEach(option => {
+        const optionElement = document.createElement('div');
+        optionElement.className = 'option';
+        
+        if (question.type === 'single') {
+          // Option unique (radio)
+          optionElement.innerHTML = `
+            <input type="radio" id="${option.value}" name="${question.id}" value="${option.value}" 
+              ${state.responses[question.id] === option.value ? 'checked' : ''}>
+            <label for="${option.value}">
+              <span class="option-text">${option.text}</span>
+              ${option.description ? `<span class="option-description">${option.description}</span>` : ''}
+            </label>
+          `;
+          
+          // Ajout de l'événement click pour passer automatiquement à la question suivante
+          optionElement.addEventListener('click', () => {
+            document.getElementById(option.value).checked = true;
+            saveResponse(question.id, option.value);
+            setTimeout(() => goToNextQuestion(), 500);
+          });
+        } else if (question.type === 'multiple') {
+          // Options multiples (checkbox)
+          optionElement.innerHTML = `
+            <input type="checkbox" id="${option.value}" name="${question.id}" value="${option.value}"
+              ${state.responses[question.id] && state.responses[question.id].includes(option.value) ? 'checked' : ''}>
+            <label for="${option.value}">
+              <span class="option-text">${option.text}</span>
+              ${option.description ? `<span class="option-description">${option.description}</span>` : ''}
+            </label>
+          `;
+          
+          // Pour les options multiples, l'utilisateur doit cliquer sur "Suivant"
+          const checkbox = optionElement.querySelector('input[type="checkbox"]');
+          checkbox.addEventListener('change', () => {
+            const selectedOptions = getSelectedOptions(question.id);
+            
+            // Si un maximum est défini, désactiver les autres options une fois atteint
+            if (question.max && selectedOptions.length > question.max) {
+              checkbox.checked = false;
+              alert(`Vous pouvez sélectionner au maximum ${question.max} options.`);
+            } else {
+              saveMultipleResponses(question.id, getSelectedOptions(question.id));
+            }
+          });
+        }
+        
+        optionsContainer.appendChild(optionElement);
+      });
+      
+      // Mettre à jour la barre de progression
+      updateProgress();
+      
+      // Mettre à jour les boutons de navigation
+      updateNavigationButtons();
+      
+      // Défiler vers le haut de la page pour la nouvelle question
+      window.scrollTo(0, 0);
+    }
+    
+    // Récupère les options sélectionnées pour les questions à choix multiples
+    function getSelectedOptions(questionId) {
+      const checkboxes = document.querySelectorAll(`input[name="${questionId}"]:checked`);
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    // Vérifie si une condition est remplie
+    function checkCondition(condition) {
+      const { questionId, operator, value } = condition;
+      const response = state.responses[questionId];
+      
+      if (!response) return false;
+      
+      switch (operator) {
+        case '==':
+          return response === value;
+        case '!=':
+          return response !== value;
+        case '>':
+          return parseInt(response) > parseInt(value);
+        case '<':
+          return parseInt(response) < parseInt(value);
+        case '>=':
+          return parseInt(response) >= parseInt(value);
+        case '<=':
+          return parseInt(response) <= parseInt(value);
+        case 'includes':
+          return Array.isArray(response) && response.includes(value);
+        default:
+          return false;
+      }
+    }
+    
+    // Sauvegarde la réponse à une question à choix unique
+    function saveResponse(questionId, value) {
+      state.responses[questionId] = value;
+    }
+    
+    // Sauvegarde les réponses à une question à choix multiples
+    function saveMultipleResponses(questionId, values) {
+      state.responses[questionId] = values;
+    }
+    
+    // Met à jour la barre de progression
+    function updateProgress() {
+      const totalQuestions = questions.length;
+      const currentQuestion = state.currentQuestionIndex + 1;
+      const progressPercent = (currentQuestion / totalQuestions) * 100;
+      
+      document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+      document.getElementById('progress-text').textContent = `Question ${currentQuestion}/${totalQuestions}`;
+    }
+    
+    // Met à jour les boutons de navigation
+    function updateNavigationButtons() {
+      const prevButton = document.getElementById('btn-previous');
+      const nextButton = document.getElementById('btn-next');
+      
+      // Gérer le bouton précédent
+      if (state.currentQuestionIndex === 0) {
+        prevButton.style.visibility = 'hidden';
+      } else {
+        prevButton.style.visibility = 'visible';
+      }
+      
+      // Gérer le bouton suivant
+      if (state.currentQuestionIndex === questions.length - 1) {
+        nextButton.textContent = 'Terminer';
+      } else {
+        nextButton.textContent = 'Suivant';
+      }
+      
+      // Vérifier si la question courante a une réponse
+      const currentQuestion = questions[state.currentQuestionIndex];
+      const hasResponse = state.responses[currentQuestion.id];
+      
+      // Pour les questions à choix multiples, toujours activer le bouton suivant
+      if (currentQuestion.type === 'multiple') {
+        nextButton.disabled = false;
+      } else {
+        // Pour les questions à choix unique, activer le bouton suivant seulement si une réponse est sélectionnée
+        nextButton.disabled = !hasResponse;
+      }
+    }
+    
+    // Passe à la question précédente
+    function goToPreviousQuestion() {
+      if (state.currentQuestionIndex > 0) {
+        displayQuestion(state.currentQuestionIndex - 1);
+      }
+    }
+    
+    // Passe à la question suivante ou termine le questionnaire
+    function goToNextQuestion() {
+      // Sauvegarder la réponse courante si elle n'a pas été sauvegardée automatiquement
+      const currentQuestion = questions[state.currentQuestionIndex];
+      
+      if (currentQuestion.type === 'single') {
+        const selectedOption = document.querySelector(`input[name="${currentQuestion.id}"]:checked`);
+        if (selectedOption) {
+          saveResponse(currentQuestion.id, selectedOption.value);
+        }
+      } else if (currentQuestion.type === 'multiple') {
+        saveMultipleResponses(currentQuestion.id, getSelectedOptions(currentQuestion.id));
+      }
+      
+      // Si c'est la dernière question, terminer le questionnaire
+      if (state.currentQuestionIndex === questions.length - 1) {
+        completeQuestionnaire();
+      } else {
+        // Sinon, passer à la question suivante
+        displayQuestion(state.currentQuestionIndex + 1);
+      }
+    }
+    
+    // Termine le questionnaire et génère un rapport de démonstration
+    function completeQuestionnaire() {
+      // Afficher l'écran de chargement
+      document.getElementById('questionnaire-container').style.display = 'none';
+      document.getElementById('loading-container').style.display = 'flex';
+      
+      // Simuler un délai de chargement (2 secondes)
+      setTimeout(() => {
+        // Générer un rapport de démonstration
+        generateDemoReport();
+      }, 2000);
+    }
+    
+    // Génère un rapport de démonstration
+    function generateDemoReport() {
+      // Masquer le conteneur de chargement
+      document.getElementById('loading-container').style.display = 'none';
+      
+      // Afficher les résultats
+      const resultsContainer = document.getElementById('results-container');
+      resultsContainer.style.display = 'flex';
+      
+      // Créer une allocation d'actifs de démonstration
+      const demoAllocation = {
+        "bourse": 40,
+        "obligations": 20,
+        "immo": 25,
+        "crypto": 5,
+        "or": 5,
+        "cash": 5
+      };
+      
+      // Créer un profil RAID de démonstration
+      const demoRaidProfile = {
+        "r": "Modéré",
+        "a": "Analytique",
+        "i": "Actif",
+        "d": "Diversifié"
+      };
+      
+      // Créer le contenu des résultats
+      let htmlContent = `
+        <h2 class="results-title">Votre Allocation d'Actifs Personnalisée</h2>
+        <div class="results-summary">
+          <p>Voici votre allocation d'actifs personnalisée basée sur vos réponses au questionnaire. Cette allocation est conçue pour correspondre à votre profil d'investisseur, vos préférences et vos objectifs.</p>
+          <p><strong>Note:</strong> Ceci est une version de démonstration. Dans la version complète, l'allocation serait calculée par notre API en fonction de vos réponses réelles.</p>
+        </div>
+        <div class="allocation-container">
+          <div class="allocation-chart">
+      `;
+      
+      // Ajouter l'allocation de démonstration
+      for (const [asset, percentage] of Object.entries(demoAllocation)) {
+        htmlContent += `
+          <div class="allocation-bar">
+            <div class="allocation-label">${formatAssetName(asset)}</div>
+            <div class="allocation-bar-outer">
+              <div class="allocation-bar-inner" style="width: ${percentage}%"></div>
+            </div>
+            <div class="allocation-percentage">${percentage}%</div>
+          </div>
+        `;
+      }
+      
+      htmlContent += `</div>`;
+      
+      // Ajouter le profil RAID de démonstration
+      htmlContent += `
+        <div class="raid-profile">
+          <h3>Votre Profil RAID</h3>
+          <ul>
+            <li><strong>Risque:</strong> ${demoRaidProfile.r}</li>
+            <li><strong>Approche:</strong> ${demoRaidProfile.a}</li>
+            <li><strong>Implication:</strong> ${demoRaidProfile.i}</li>
+            <li><strong>Diversification:</strong> ${demoRaidProfile.d}</li>
+          </ul>
+        </div>
+      `;
+      
+      // Ajouter un bouton pour recommencer
+      htmlContent += `
+        <div class="results-actions">
+          <button id="restart-button" class="restart-button">Recommencer le questionnaire</button>
+        </div>
+      `;
+      
+      htmlContent += `</div>`; // Fermer allocation-container
+      
+      // Mettre à jour le conteneur de résultats
+      resultsContainer.innerHTML = htmlContent;
+      
+      // Attacher l'événement au bouton de redémarrage
+      document.getElementById('restart-button').addEventListener('click', () => {
+        location.reload();
+      });
+    }
+    
+    // Affiche un message d'erreur
+    function showError(message) {
+      document.getElementById('questionnaire-container').style.display = 'none';
+      document.getElementById('loading-container').style.display = 'none';
+      document.getElementById('results-container').style.display = 'none';
+      
+      const errorContainer = document.getElementById('error-container');
+      errorContainer.style.display = 'flex';
+      errorContainer.innerHTML = `
+        <div class="error-icon">⚠️</div>
+        <p class="error-message">${message}</p>
+        <button id="error-retry-button" class="btn">Réessayer</button>
+      `;
+      
+      document.getElementById('error-retry-button').addEventListener('click', () => {
+        location.reload();
+      });
+    }
+    
+    // Formate le nom des actifs pour l'affichage
+    function formatAssetName(assetKey) {
+      const assetNames = {
+        "bourse": "Actions",
+        "obligations": "Obligations",
+        "immo": "Immobilier",
+        "crypto": "Crypto-monnaies",
+        "or": "Or",
+        "cash": "Liquidités"
+      };
+      
+      return assetNames[assetKey] || assetKey;
+    }
+    
+    // Initialiser le questionnaire au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+      initQuestionnaire();
+    });
+  </script>
+</body>
+</html> 
