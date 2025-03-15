@@ -34,11 +34,14 @@ function initQuestionnaire() {
 // Commence le questionnaire
 async function startQuestionnaire() {
   try {
+    console.log("Démarrage du questionnaire...");
     document.getElementById('start-container').style.display = 'none';
     document.getElementById('loading-container').style.display = 'flex';
     
     // Créer une nouvelle session
+    console.log("Tentative de création d'une session...");
     state.sessionId = await createSession();
+    console.log("Session créée avec succès, ID:", state.sessionId);
     
     // Masquer le chargement et afficher le questionnaire
     document.getElementById('loading-container').style.display = 'none';
@@ -48,8 +51,9 @@ async function startQuestionnaire() {
     displayQuestion(0);
     
   } catch (error) {
-    showError("Impossible de démarrer le questionnaire. Veuillez réessayer.");
-    console.error(error);
+    console.error("Erreur lors du démarrage du questionnaire:", error);
+    document.getElementById('loading-container').style.display = 'none';
+    showError("Impossible de démarrer le questionnaire. Erreur: " + error.message);
   }
 }
 
@@ -267,224 +271,6 @@ function goToNextQuestion() {
     displayQuestion(state.currentQuestionIndex + 1);
   }
 }
-// Termine le questionnaire et soumet toutes les réponses
-async function completeQuestionnaire() {
-  try {
-    // Afficher l'écran de chargement
-    document.getElementById('questionnaire-container').style.display = 'none';
-    document.getElementById('loading-container').style.display = 'flex';
-    
-    // Préparer les réponses par section
-    const part1Responses = prepareResponsesForPart1();
-    const part2Responses = prepareResponsesForPart2();
-    const part3Responses = prepareResponsesForPart3();
-    
-    // Soumettre les réponses de chaque partie
-    await submitPart1(state.sessionId, part1Responses);
-    await submitPart2(state.sessionId, part2Responses);
-    await submitPart3(state.sessionId, part3Responses);
-    
-    // Générer le rapport
-    await generateReport();
-    
-  } catch (error) {
-    showError("Une erreur est survenue lors de la soumission de vos réponses. Veuillez réessayer.");
-    console.error(error);
-  }
-}
-
-// Prépare les réponses pour la partie 1
-function prepareResponsesForPart1() {
-  const part1Questions = questions.filter(q => q.section === 1);
-  const responses = {};
-  
-  // Structurer les réponses par axe RAID
-  const riskResponses = [];
-  const approachResponses = [];
-  const implicationResponses = [];
-  const diversificationResponses = [];
-  
-  part1Questions.forEach(question => {
-    const response = state.responses[question.id];
-    if (response) {
-      if (question.axe === 'R') riskResponses.push(response);
-      else if (question.axe === 'A') approachResponses.push(response);
-      else if (question.axe === 'I') implicationResponses.push(response);
-      else if (question.axe === 'D') diversificationResponses.push(response);
-    }
-  });
-  
-  return {
-    risk_answers: riskResponses,
-    approach_answers: approachResponses,
-    implication_answers: implicationResponses,
-    diversification_answers: diversificationResponses
-  };
-}
-
-// Prépare les réponses pour la partie 2
-function prepareResponsesForPart2() {
-  const part2Questions = questions.filter(q => q.section === 2);
-  const responses = {
-    knowledge_levels: {},
-    preferences: {},
-    og_crypto: false,
-    strategies: []
-  };
-  
-  part2Questions.forEach(question => {
-    const response = state.responses[question.id];
-    if (response) {
-      if (question.id === 'knowledge_bourse') responses.knowledge_levels.bourse = parseInt(response);
-      else if (question.id === 'knowledge_immo') responses.knowledge_levels.immo = parseInt(response);
-      else if (question.id === 'knowledge_crypto') responses.knowledge_levels.crypto = parseInt(response);
-      else if (question.id === 'preference_bourse') responses.preferences.bourse = parseInt(response);
-      else if (question.id === 'preference_immo') responses.preferences.immo = parseInt(response);
-      else if (question.id === 'preference_crypto') responses.preferences.crypto = parseInt(response);
-      else if (question.id === 'og_crypto') responses.og_crypto = response === 'true';
-      else if (question.id === 'strategies') responses.strategies = response;
-    }
-  });
-  
-  return responses;
-}
-
-// Prépare les réponses pour la partie 3
-function prepareResponsesForPart3() {
-  const part3Questions = questions.filter(q => q.section === 3);
-  const responses = {};
-  
-  part3Questions.forEach(question => {
-    const response = state.responses[question.id];
-    if (response) {
-      if (question.id === 'objectifs') responses.objectifs = response;
-      else if (question.id === 'horizon') responses.horizon = response;
-      else if (question.id === 'horizons_multiples') responses.horizons_multiples = response === 'true';
-      else if (question.id === 'liquidite') responses.liquidite = parseInt(response);
-      else if (question.id === 'evolution') responses.evolution = response;
-    }
-  });
-  
-  return responses;
-}
-
-// Génère et affiche le rapport final
-async function generateReport() {
-  try {
-    // Obtenir le rapport et l'allocation d'actifs
-    const reportData = await getReport(state.sessionId);
-    
-    // Masquer le conteneur de chargement
-    document.getElementById('loading-container').style.display = 'none';
-    
-    // Afficher les résultats
-    const resultsContainer = document.getElementById('results-container');
-    resultsContainer.style.display = 'flex';
-    
-    // Créer le contenu des résultats
-    let htmlContent = `
-      <h2 class="results-title">Votre Allocation d'Actifs Personnalisée</h2>
-      <div class="results-summary">
-        <p>${reportData.rapport_texte || "Voici votre allocation d'actifs personnalisée."}</p>
-      </div>
-      <div class="allocation-container">
-    `;
-    
-    // Ajouter l'allocation si disponible
-    if (reportData.allocation && Object.keys(reportData.allocation).length > 0) {
-      htmlContent += `<div class="allocation-chart">`;
-      
-      // Créer un graphique simple pour l'allocation
-      for (const [asset, percentage] of Object.entries(reportData.allocation)) {
-        const formattedPercentage = typeof percentage === 'number' ? percentage.toFixed(0) : percentage;
-        htmlContent += `
-          <div class="allocation-bar">
-            <div class="allocation-label">${formatAssetName(asset)}</div>
-            <div class="allocation-bar-outer">
-              <div class="allocation-bar-inner" style="width: ${formattedPercentage}%"></div>
-            </div>
-            <div class="allocation-percentage">${formattedPercentage}%</div>
-          </div>
-        `;
-      }
-      
-      htmlContent += `</div>`;
-    } else {
-      htmlContent += `<p class="error-message">Les données d'allocation ne sont pas disponibles.</p>`;
-    }
-    
-    // Ajouter le profil RAID si disponible
-    if (reportData.profil_raid) {
-      htmlContent += `
-        <div class="raid-profile">
-          <h3>Votre Profil RAID</h3>
-          <ul>
-            <li><strong>Risque:</strong> ${reportData.profil_raid.r}</li>
-            <li><strong>Approche:</strong> ${reportData.profil_raid.a}</li>
-            <li><strong>Implication:</strong> ${reportData.profil_raid.i}</li>
-            <li><strong>Diversification:</strong> ${reportData.profil_raid.d}</li>
-          </ul>
-        </div>
-      `;
-    }
-    
-    // Ajouter un bouton pour recommencer
-    htmlContent += `
-      <div class="results-actions">
-        <button id="restart-button" class="restart-button">Recommencer le questionnaire</button>
-      </div>
-    `;
-    
-    htmlContent += `</div>`; // Fermer allocation-container
-    
-    // Mettre à jour le conteneur de résultats
-    resultsContainer.innerHTML = htmlContent;
-    
-    // Attacher l'événement au bouton de redémarrage
-    document.getElementById('restart-button').addEventListener('click', () => {
-      location.reload();
-    });
-    
-  } catch (error) {
-    showError("Impossible de récupérer vos résultats. Veuillez réessayer.");
-    console.error(error);
-  }
-}
-
-// Affiche un message d'erreur
-function showError(message) {
-  document.getElementById('questionnaire-container').style.display = 'none';
-  document.getElementById('loading-container').style.display = 'none';
-  document.getElementById('results-container').style.display = 'none';
-  
-  const errorContainer = document.getElementById('error-container');
-  errorContainer.style.display = 'flex';
-  errorContainer.innerHTML = `
-    <div class="error-icon">⚠️</div>
-    <p class="error-message">${message}</p>
-    <button id="error-retry-button" class="btn">Réessayer</button>
-  `;
-  
-  document.getElementById('error-retry-button').addEventListener('click', () => {
-    location.reload();
-  });
-}
-
-// Formate le nom des actifs pour l'affichage
-function formatAssetName(assetKey) {
-  const assetNames = {
-    "bourse": "Actions",
-    "obligations": "Obligations",
-    "immo": "Immobilier",
-    "crypto": "Crypto-monnaies",
-    "or": "Or",
-    "cash": "Liquidités"
-  };
-  
-  return assetNames[assetKey] || assetKey;
-}
-
-export { initQuestionnaire };
 // Termine le questionnaire et soumet toutes les réponses
 async function completeQuestionnaire() {
   try {

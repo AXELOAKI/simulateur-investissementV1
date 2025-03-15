@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test API Heroku</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test de connexion à l'API Heroku</h1>
+  
+  <div>
+    <label for="api-url">URL de l'API:</label>
+    <input type="text" id="api-url" value="https://simulateur-investissement-a9a9a0e0c5c9.herokuapp.com" style="width: 100%; margin: 10px 0;">
+  </div>
+  
+  <button id="test-connection">Tester la connexion</button>
+  <button id="test-session">Tester la création de session</button>
+  
+  <h2>Résultats:</h2>
+  <pre id="results">Les résultats apparaîtront ici...</pre>
+  
+  <script>
+    document.getElementById('test-connection').addEventListener('click', async () => {
+      const resultsElement = document.getElementById('results');
+      const apiUrl = document.getElementById('api-url').value;
+      
+      resultsElement.innerHTML = "Test de connexion en cours...";
+      
+      try {
+        const startTime = performance.now();
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          mode: 'cors'
+        });
+        const endTime = performance.now();
+        
+        if (response.ok) {
+          resultsElement.innerHTML = `<span class="success">✅ Connexion réussie!</span>\n\nTemps de réponse: ${(endTime - startTime).toFixed(2)}ms\nStatut: ${response.status}\nHeaders: ${JSON.stringify(Object.fromEntries([...response.headers]), null, 2)}`;
+        } else {
+          resultsElement.innerHTML = `<span class="error">❌ Erreur de connexion</span>\n\nStatut: ${response.status}\nMessage: ${response.statusText}`;
+        }
+      } catch (error) {
+        resultsElement.innerHTML = `<span class="error">❌ Erreur de connexion</span>\n\nErreur: ${error.message}\n\nCela peut être dû à:\n- L'API est hors ligne\n- Problème de CORS (Cross-Origin Resource Sharing)\n- URL incorrecte`;
+        console.error("Erreur détaillée:", error);
+      }
+    });
+    
+    document.getElementById('test-session').addEventListener('click', async () => {
+      const resultsElement = document.getElementById('results');
+      const apiUrl = document.getElementById('api-url').value;
+      
+      resultsElement.innerHTML = "Test de création de session en cours...";
+      
+      try {
+        const startTime = performance.now();
+        const response = await fetch(`${apiUrl}/start_session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors'
+        });
+        const endTime = performance.now();
+        
+        if (response.ok) {
+          const data = await response.json();
+          resultsElement.innerHTML = `<span class="success">✅ Session créée avec succès!</span>\n\nTemps de réponse: ${(endTime - startTime).toFixed(2)}ms\nSession ID: ${data.session_id}\nRéponse complète: ${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultsElement.innerHTML = `<span class="error">❌ Erreur lors de la création de session</span>\n\nStatut: ${response.status}\nMessage: ${response.statusText}`;
+        }
+      } catch (error) {
+        resultsElement.innerHTML = `<span class="error">❌ Erreur lors de la création de session</span>\n\nErreur: ${error.message}\n\nCela peut être dû à:\n- L'API est hors ligne\n- Problème de CORS (Cross-Origin Resource Sharing)\n- Endpoint incorrect`;
+        console.error("Erreur détaillée:", error);
+      }
+    });
+  </script>
+</body>
+</html> 

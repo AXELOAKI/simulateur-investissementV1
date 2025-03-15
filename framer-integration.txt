@@ -1,0 +1,18 @@
+<!-- Code iframe simplifié pour Framer -->
+<iframe 
+  src="https://axeloaki.github.io/simulateur-investissementV1/" 
+  width="100%" 
+  height="700px" 
+  frameborder="0">
+</iframe>
+
+<!-- 
+Instructions pour Framer :
+1. Ajoutez un élément "Embed" ou "HTML Embed" à votre page
+2. Copiez le code iframe ci-dessus dans l'élément
+3. Dans les propriétés de l'élément Framer, vous pouvez ensuite :
+   - Ajuster la largeur et la hauteur
+   - Ajouter un arrondi des coins (border-radius)
+   - Ajouter une ombre portée
+   - Supprimer les bordures
+--> 
